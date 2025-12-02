@@ -33,7 +33,7 @@ public class Operator {
     /** Apply this operator on the provided rule. */
     public Object apply(final String flagKey, final String targetingRule, final EvaluationContext ctx)
             throws TargetingRuleException {
-        final Map<String, Object> flagdProperties = new HashMap<>();
+        final Map<String, Object> flagdProperties = new HashMap<>(2);
         flagdProperties.put(FLAG_KEY, flagKey);
 
         long unixTimestamp = Instant.now().getEpochSecond();

@@ -249,12 +249,14 @@ public final class RpcResolver implements Resolver {
         // Extract metadata from response
         ImmutableMetadata immutableMetadata = metadataFromResponse(response);
 
-        ProviderEvaluation<ValT> result = ProviderEvaluation.<ValT>builder()
-                .value(value)
-                .variant(getField(response, Config.VARIANT_FIELD))
-                .reason(getField(response, Config.REASON_FIELD))
-                .flagMetadata(immutableMetadata)
-                .build();
+        var result = new ProviderEvaluation<>(
+                value,
+                getField(response, Config.VARIANT_FIELD),
+                getField(response, Config.REASON_FIELD),
+                null,
+                null,
+                immutableMetadata
+        );
 
         // cache if cache enabled
         if (this.isEvaluationCacheable(result)) {

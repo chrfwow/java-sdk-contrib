@@ -11,6 +11,7 @@ import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -96,16 +97,15 @@ public class FlagParser {
 
     private static Map<String, Object> parseMetadata(TreeNode metadataNode) throws JsonProcessingException {
         if (metadataNode == null) {
-            return new HashMap<>();
+            return Collections.emptyMap();
         }
 
-        TypeReference<Map<String, Object>> typeRef = new TypeReference<Map<String, Object>>() {};
+        TypeReference<Map<String, Object>> typeRef = new TypeReference<>() {};
         return MAPPER.treeToValue(metadataNode, typeRef);
     }
 
     private static String transposeEvaluators(final String configuration) throws IOException {
         try (JsonParser parser = MAPPER.createParser(configuration)) {
-            final Map<String, Pattern> patternMap = new HashMap<>();
             final TreeNode treeNode = parser.readValueAsTree();
             final TreeNode evaluators = treeNode.get(EVALUATOR_KEY);
 
@@ -115,6 +115,7 @@ public class FlagParser {
 
             String replacedConfigurations = configuration;
             final Iterator<String> evalFields = evaluators.fieldNames();
+            final Map<String, Pattern> patternMap = new HashMap<>();
 
             while (evalFields.hasNext()) {
                 final String evalName = evalFields.next();

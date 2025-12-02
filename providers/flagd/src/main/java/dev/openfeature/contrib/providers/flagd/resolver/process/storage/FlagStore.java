@@ -11,6 +11,7 @@ import dev.openfeature.contrib.providers.flagd.resolver.process.storage.connecto
 import dev.openfeature.sdk.ImmutableStructure;
 import dev.openfeature.sdk.Structure;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -181,6 +182,6 @@ public class FlagStore implements Storage {
         changedFlags.putAll(addedFeatureFlags);
         changedFlags.putAll(removedFeatureFlags);
         changedFlags.putAll(updatedFeatureFlags);
-        return changedFlags.keySet().stream().collect(Collectors.toList());
+        return new ArrayList<>(changedFlags.keySet());
     }
 }

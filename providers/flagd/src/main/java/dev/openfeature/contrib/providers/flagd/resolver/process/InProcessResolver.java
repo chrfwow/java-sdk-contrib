@@ -163,20 +163,26 @@ public class InProcessResolver implements Resolver {
 
         // missing flag
         if (flag == null) {
-            return ProviderEvaluation.<T>builder()
-                    .errorMessage("flag: " + key + " not found")
-                    .errorCode(ErrorCode.FLAG_NOT_FOUND)
-                    .flagMetadata(getFlagMetadata(storageQueryResult))
-                    .build();
+            return new ProviderEvaluation<>(
+                    null,
+                    null,
+                    Reason.ERROR.toString(),
+                    ErrorCode.FLAG_NOT_FOUND,
+                    "flag: " + key + " not found",
+                    getFlagMetadata(storageQueryResult)
+            );
         }
 
         // state check
         if ("DISABLED".equals(flag.getState())) {
-            return ProviderEvaluation.<T>builder()
-                    .errorMessage("flag: " + key + " is disabled")
-                    .errorCode(ErrorCode.FLAG_NOT_FOUND)
-                    .flagMetadata(getFlagMetadata(storageQueryResult))
-                    .build();
+            return new ProviderEvaluation<>(
+                    null,
+                    null,
+                    Reason.ERROR.toString(),
+                    ErrorCode.FLAG_NOT_FOUND,
+                    "flag: " + key + " is disabled",
+                    getFlagMetadata(storageQueryResult)
+            );
         }
 
         final String resolvedVariant;
@@ -206,12 +212,14 @@ public class InProcessResolver implements Resolver {
         Object value = flag.getVariants().get(resolvedVariant);
         if (value == null) {
             if (StringUtils.isEmpty(resolvedVariant) && StringUtils.isEmpty(flag.getDefaultVariant())) {
-                return ProviderEvaluation.<T>builder()
-                        .reason(Reason.ERROR.toString())
-                        .errorCode(ErrorCode.FLAG_NOT_FOUND)
-                        .errorMessage("Flag '" + key + "' has no default variant defined, will use code default")
-                        .flagMetadata(getFlagMetadata(storageQueryResult))
-                        .build();
+                return new ProviderEvaluation<>(
+                        null,
+                        null,
+                        Reason.ERROR.toString(),
+                        ErrorCode.FLAG_NOT_FOUND,
+                        "Flag '" + key + "' has no default variant defined, will use code default",
+                        getFlagMetadata(storageQueryResult)
+                );
             }
 
             String message = String.format("variant %s not found in flag with key %s", resolvedVariant, key);
@@ -226,17 +234,19 @@ public class InProcessResolver implements Resolver {
             value = ((Double) value).intValue();
         }
         if (!type.isAssignableFrom(value.getClass())) {
-            String message = "returning default variant for flagKey: %s, type not valid";
-            log.debug(String.format(message, key));
+            String message = String.format("returning default variant for flagKey: %s, type not valid", key);
+            log.debug(message);
             throw new TypeMismatchError(message);
         }
 
-        return ProviderEvaluation.<T>builder()
-                .value((T) value)
-                .variant(resolvedVariant)
-                .reason(reason)
-                .flagMetadata(getFlagMetadata(storageQueryResult))
-                .build();
+        return new ProviderEvaluation<>(
+                (T) value,
+                resolvedVariant,
+                reason,
+                null,
+                null,
+                getFlagMetadata(storageQueryResult)
+        );
     }
 
     private ImmutableMetadata getFlagMetadata(StorageQueryResult storageQueryResult) {

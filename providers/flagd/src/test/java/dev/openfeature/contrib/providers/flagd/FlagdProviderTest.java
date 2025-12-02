@@ -48,8 +48,11 @@ import dev.openfeature.sdk.ProviderEvent;
 import dev.openfeature.sdk.Reason;
 import dev.openfeature.sdk.Structure;
 import dev.openfeature.sdk.Value;
+import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.net.URL;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -61,6 +64,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -350,29 +354,29 @@ class FlagdProviderTest {
         when(serviceBlockingStubMock.withDeadlineAfter(anyLong(), any(TimeUnit.class)))
                 .thenReturn(serviceBlockingStubMock);
         when(serviceBlockingStubMock.resolveBoolean(argThat(x -> {
-                    final Struct struct = x.getContext();
-                    final Map<String, com.google.protobuf.Value> valueMap = struct.getFieldsMap();
+            final Struct struct = x.getContext();
+            final Map<String, com.google.protobuf.Value> valueMap = struct.getFieldsMap();
 
-                    return STRING_ATTR_VALUE.equals(
-                                    valueMap.get(STRING_ATTR_KEY).getStringValue())
-                            && INT_ATTR_VALUE == valueMap.get(INT_ATTR_KEY).getNumberValue()
-                            && DOUBLE_ATTR_VALUE
-                                    == valueMap.get(DOUBLE_ATTR_KEY).getNumberValue()
-                            && valueMap.get(BOOLEAN_ATTR_KEY).getBoolValue()
-                            && "MY_TARGETING_KEY"
-                                    .equals(valueMap.get("targetingKey").getStringValue())
-                            && LIST_ATTR_VALUE.get(0).asInteger()
-                                    == valueMap.get(LIST_ATTR_KEY)
-                                            .getListValue()
-                                            .getValuesList()
-                                            .get(0)
-                                            .getNumberValue()
-                            && STRUCT_ATTR_INNER_VALUE.equals(valueMap.get(STRUCT_ATTR_KEY)
-                                    .getStructValue()
-                                    .getFieldsMap()
-                                    .get(STRUCT_ATTR_INNER_KEY)
-                                    .getStringValue());
-                })))
+            return STRING_ATTR_VALUE.equals(
+                    valueMap.get(STRING_ATTR_KEY).getStringValue())
+                    && INT_ATTR_VALUE == valueMap.get(INT_ATTR_KEY).getNumberValue()
+                    && DOUBLE_ATTR_VALUE
+                    == valueMap.get(DOUBLE_ATTR_KEY).getNumberValue()
+                    && valueMap.get(BOOLEAN_ATTR_KEY).getBoolValue()
+                    && "MY_TARGETING_KEY"
+                    .equals(valueMap.get("targetingKey").getStringValue())
+                    && LIST_ATTR_VALUE.get(0).asInteger()
+                    == valueMap.get(LIST_ATTR_KEY)
+                    .getListValue()
+                    .getValuesList()
+                    .get(0)
+                    .getNumberValue()
+                    && STRUCT_ATTR_INNER_VALUE.equals(valueMap.get(STRUCT_ATTR_KEY)
+                    .getStructValue()
+                    .getFieldsMap()
+                    .get(STRUCT_ATTR_INNER_KEY)
+                    .getStringValue());
+        })))
                 .thenReturn(booleanResponse);
 
         ChannelConnector grpc = mock(ChannelConnector.class);
@@ -560,9 +564,9 @@ class FlagdProviderTest {
         onProviderEvent.setAccessible(true);
 
         doAnswer((i) -> {
-                    onProviderEvent.invoke(provider, new FlagdProviderEvent(ProviderEvent.PROVIDER_READY));
-                    return null;
-                })
+            onProviderEvent.invoke(provider, new FlagdProviderEvent(ProviderEvent.PROVIDER_READY));
+            return null;
+        })
                 .when(resolverMock)
                 .init();
 
@@ -605,10 +609,10 @@ class FlagdProviderTest {
                     // when our mock resolver initializes, it runs the passed onConnectionEvent
                     // callback
                     doAnswer(invocation -> {
-                                onConnectionEvent.accept(
-                                        new FlagdProviderEvent(ProviderEvent.PROVIDER_READY, metadata));
-                                return null;
-                            })
+                        onConnectionEvent.accept(
+                                new FlagdProviderEvent(ProviderEvent.PROVIDER_READY, metadata));
+                        return null;
+                    })
                             .when(mock)
                             .init();
                 })) {
@@ -646,10 +650,10 @@ class FlagdProviderTest {
                     // when our mock resolver initializes, it runs the passed onConnectionEvent
                     // callback
                     doAnswer(invocation -> {
-                                onConnectionEvent.accept(
-                                        new FlagdProviderEvent(ProviderEvent.PROVIDER_READY, metadata));
-                                return null;
-                            })
+                        onConnectionEvent.accept(
+                                new FlagdProviderEvent(ProviderEvent.PROVIDER_READY, metadata));
+                        return null;
+                    })
                             .when(mock)
                             .init();
                 })) {
@@ -737,5 +741,111 @@ class FlagdProviderTest {
         }
 
         return provider;
+    }
+
+    @Test
+    void a() {
+        String TIME_STAMP = "timestamp";
+        String FLAG_KEY = "flagKey";
+        var th = TIME_STAMP.hashCode();
+        var fh = FLAG_KEY.hashCode();
+        System.out.println("th = " + th);
+        System.out.println("fh = " + fh);
+
+        final Map<String, Object> flagdProperties = new HashMap<>(2);
+        flagdProperties.put(FLAG_KEY, "key");
+
+        long unixTimestamp = Instant.now().getEpochSecond();
+        flagdProperties.put(TIME_STAMP, unixTimestamp);
+
+        System.out.println("flagdProperties = " + flagdProperties);
+    }
+
+    @Test
+    void o() throws ClassNotFoundException {
+        var r = new ArrayList<String>();
+        getClassNames(r, "dev.openfeature.contrib.providers", new File(
+                "Z:\\Workspaces\\chrfwow\\java-sdk-contrib\\providers\\flagd\\src\\main\\java\\dev\\openfeature\\contrib\\providers\\flagd"));
+        System.out.println("r = " + r);
+        //System.out.println("getClasses(\".\") = " + getClasses(""));
+    }
+
+
+    private static void getClassNames(ArrayList<String> classNames, String packageName, File file)
+            throws ClassNotFoundException {
+        var files = file.listFiles();
+        if (files == null) {
+            if (!file.getName().endsWith(".java")) {
+                return;
+            }
+            var clazz = Class.forName(packageName + "." + file.getName().replace(".java", ""));
+            if (clazz != null && !clazz.isPrimitive() && !clazz.isArray()) {
+                classNames.add(clazz.getName());
+            }
+        } else {
+            for (File child : files) {
+                getClassNames(classNames, packageName + "." + file.getName(), child);
+            }
+        }
+    }
+
+    private static List<String> getClasses(String packageName) {
+        try {
+
+            String path = packageName.replace('.', '/');
+            URL resource = FlagdProvider.class.getResource(path);
+
+            List<File> files = new ArrayList<File>();
+            var file = new File(resource.getFile());
+            List<File> dirs = new ArrayList<File>(List.of(file.listFiles()));
+            List<String> classNames = new ArrayList<>();
+            for (int i = 0; i < dirs.size(); i++) {
+                var listedFile = dirs.get(i);
+                if (listedFile == null) {
+                    continue;
+                }
+                if (listedFile.isDirectory()) {
+                    dirs.addAll(List.of(listedFile.listFiles()));
+                } else {
+                    files.add(listedFile);
+                    Class.forName("dev.openfeature.contrib.flagd" + "." + listedFile.getName());
+                }
+            }
+            ArrayList<Class> classes = new ArrayList<Class>();
+            for (File directory : dirs) {
+                classes.addAll(findClasses(directory, packageName));
+            }
+
+            return classes.stream()
+                    .filter(clazz -> !clazz.isPrimitive())
+                    .filter(clazz -> !clazz.isArray())
+                    .filter(clazz -> clazz.getName().contains("dev.openfeature.contrib.flagd"))
+                    .map(Class::getPackageName)
+                    .filter(name -> name != null)
+                    .distinct()
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static List<Class> findClasses(File directory, String packageName) throws ClassNotFoundException {
+        List<Class> classes = new ArrayList<Class>();
+        if (!directory.exists()) {
+            return classes;
+        }
+        File[] files = directory.listFiles();
+        if (files == null) {
+            return classes;
+        }
+        for (File file : files) {
+            if (file.isDirectory()) {
+                classes.addAll(findClasses(file, packageName + "." + file.getName()));
+            } else if (file.getName().endsWith(".class")) {
+                classes.add(
+                        Class.forName(packageName + '.' + file.getName().substring(0, file.getName().length() - 6)));
+            }
+        }
+        return classes;
     }
 }
