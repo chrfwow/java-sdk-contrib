@@ -1,6 +1,7 @@
 package dev.openfeature.contrib.providers.flagd.resolver;
 
 import dev.openfeature.sdk.EvaluationContext;
+import dev.openfeature.sdk.LayeredEvaluationContext;
 import dev.openfeature.sdk.ProviderEvaluation;
 import dev.openfeature.sdk.Value;
 
@@ -12,13 +13,45 @@ public interface Resolver {
 
     default void onError() {}
 
-    ProviderEvaluation<Boolean> booleanEvaluation(String key, Boolean defaultValue, EvaluationContext ctx);
+    default ProviderEvaluation<Boolean> booleanEvaluation(String key, Boolean defaultValue, EvaluationContext ctx) {
+        return booleanEvaluation(key, defaultValue, new LayeredEvaluationContext(null, null, null, ctx));
+    }
 
-    ProviderEvaluation<String> stringEvaluation(String key, String defaultValue, EvaluationContext ctx);
+    default ProviderEvaluation<String> stringEvaluation(String key, String defaultValue, EvaluationContext ctx) {
+        return stringEvaluation(key, defaultValue, new LayeredEvaluationContext(null, null, null, ctx));
+    }
 
-    ProviderEvaluation<Double> doubleEvaluation(String key, Double defaultValue, EvaluationContext ctx);
+    default ProviderEvaluation<Double> doubleEvaluation(String key, Double defaultValue, EvaluationContext ctx) {
+        return doubleEvaluation(key, defaultValue, new LayeredEvaluationContext(null, null, null, ctx));
+    }
 
-    ProviderEvaluation<Integer> integerEvaluation(String key, Integer defaultValue, EvaluationContext ctx);
+    default ProviderEvaluation<Integer> integerEvaluation(String key, Integer defaultValue, EvaluationContext ctx) {
+        return integerEvaluation(key, defaultValue, new LayeredEvaluationContext(null, null, null, ctx));
+    }
 
-    ProviderEvaluation<Value> objectEvaluation(String key, Value defaultValue, EvaluationContext ctx);
+    default ProviderEvaluation<Value> objectEvaluation(String key, Value defaultValue, EvaluationContext ctx) {
+        return objectEvaluation(key, defaultValue, new LayeredEvaluationContext(null, null, null, ctx));
+    }
+
+    default ProviderEvaluation<Boolean> booleanEvaluation(String key, Boolean defaultValue,
+            LayeredEvaluationContext ctx) {
+        return booleanEvaluation(key, defaultValue, (EvaluationContext) ctx);
+    }
+
+    default ProviderEvaluation<String> stringEvaluation(String key, String defaultValue, LayeredEvaluationContext ctx) {
+        return stringEvaluation(key, defaultValue, (EvaluationContext) ctx);
+    }
+
+    default ProviderEvaluation<Double> doubleEvaluation(String key, Double defaultValue, LayeredEvaluationContext ctx) {
+        return doubleEvaluation(key, defaultValue, (EvaluationContext) ctx);
+    }
+
+    default ProviderEvaluation<Integer> integerEvaluation(String key, Integer defaultValue,
+            LayeredEvaluationContext ctx) {
+        return integerEvaluation(key, defaultValue, (EvaluationContext) ctx);
+    }
+
+    default ProviderEvaluation<Value> objectEvaluation(String key, Value defaultValue, LayeredEvaluationContext ctx) {
+        return objectEvaluation(key, defaultValue, (EvaluationContext) ctx);
+    }
 }

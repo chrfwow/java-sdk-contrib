@@ -1,6 +1,11 @@
 package dev.openfeature.contrib.providers.flagd.resolver.process.targeting;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import dev.openfeature.contrib.providers.flagd.resolver.process.WasmResolver;
 import dev.openfeature.sdk.EvaluationContext;
+import dev.openfeature.sdk.ImmutableContext;
+import dev.openfeature.sdk.LayeredEvaluationContext;
+import dev.openfeature.sdk.Value;
 import io.github.jamsesso.jsonlogic.JsonLogic;
 import io.github.jamsesso.jsonlogic.JsonLogicException;
 import java.time.Instant;
@@ -30,26 +35,34 @@ public class Operator {
         jsonLogicHandler.addOperation(new StringComp(StringComp.Type.ENDS_WITH));
     }
 
+    WasmResolver wasmResolver = new WasmResolver();
+
+
     /** Apply this operator on the provided rule. */
-    public Object apply(final String flagKey, final String targetingRule, final EvaluationContext ctx)
+    public Object apply(final String flagKey, final String targetingRule, final LayeredEvaluationContext ctx)
             throws TargetingRuleException {
         final Map<String, Object> flagdProperties = new HashMap<>();
         flagdProperties.put(FLAG_KEY, flagKey);
 
-        long unixTimestamp = Instant.now().getEpochSecond();
+        var unixTimestamp = Instant.now();
         flagdProperties.put(TIME_STAMP, unixTimestamp);
-
-        final Map<String, Object> targetingCtxData = ctx.asObjectMap();
 
         // asObjectMap() does not provide explicitly set targeting key (ex:- new
         // ImmutableContext("TargetingKey") ).
         // Hence, we add this explicitly here for targeting rule processing.
-        targetingCtxData.put(TARGET_KEY, ctx.getTargetingKey());
-        targetingCtxData.put(FLAGD_PROPS_KEY, flagdProperties);
+
+        var flagdContext = new ImmutableContext(Map.of(
+                FLAGD_PROPS_KEY + "." + FLAG_KEY,
+                new Value(flagKey),
+                FLAGD_PROPS_KEY + "." + TIME_STAMP,
+                new Value(unixTimestamp)
+        ));
+        ctx.putHookContext(flagdContext);
 
         try {
-            return jsonLogicHandler.apply(targetingRule, targetingCtxData);
-        } catch (JsonLogicException e) {
+            return wasmResolver.apply(targetingRule, ctx);
+            //return jsonLogicHandler.apply(targetingRule, targetingCtxData);
+        } catch (Exception e) {
             throw new TargetingRuleException("Error evaluating json logic", e);
         }
     }

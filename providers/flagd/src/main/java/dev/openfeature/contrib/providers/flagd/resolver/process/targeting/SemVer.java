@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.semver4j.Semver;
 
 @Slf4j
-class SemVer implements PreEvaluatedArgumentsExpression {
+public class SemVer implements PreEvaluatedArgumentsExpression {
 
     private static final String EQ = "=";
     private static final String NEQ = "!=";

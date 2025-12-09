@@ -18,6 +18,7 @@ import dev.openfeature.contrib.providers.flagd.resolver.process.targeting.Target
 import dev.openfeature.sdk.ErrorCode;
 import dev.openfeature.sdk.EvaluationContext;
 import dev.openfeature.sdk.ImmutableMetadata;
+import dev.openfeature.sdk.LayeredEvaluationContext;
 import dev.openfeature.sdk.ProviderEvaluation;
 import dev.openfeature.sdk.ProviderEvent;
 import dev.openfeature.sdk.Reason;
@@ -106,35 +107,35 @@ public class InProcessResolver implements Resolver {
     /**
      * Resolve a boolean flag.
      */
-    public ProviderEvaluation<Boolean> booleanEvaluation(String key, Boolean defaultValue, EvaluationContext ctx) {
+    public ProviderEvaluation<Boolean> booleanEvaluation(String key, Boolean defaultValue, LayeredEvaluationContext ctx) {
         return resolve(Boolean.class, key, ctx);
     }
 
     /**
      * Resolve a string flag.
      */
-    public ProviderEvaluation<String> stringEvaluation(String key, String defaultValue, EvaluationContext ctx) {
+    public ProviderEvaluation<String> stringEvaluation(String key, String defaultValue, LayeredEvaluationContext ctx) {
         return resolve(String.class, key, ctx);
     }
 
     /**
      * Resolve a double flag.
      */
-    public ProviderEvaluation<Double> doubleEvaluation(String key, Double defaultValue, EvaluationContext ctx) {
+    public ProviderEvaluation<Double> doubleEvaluation(String key, Double defaultValue, LayeredEvaluationContext ctx) {
         return resolve(Double.class, key, ctx);
     }
 
     /**
      * Resolve an integer flag.
      */
-    public ProviderEvaluation<Integer> integerEvaluation(String key, Integer defaultValue, EvaluationContext ctx) {
+    public ProviderEvaluation<Integer> integerEvaluation(String key, Integer defaultValue, LayeredEvaluationContext ctx) {
         return resolve(Integer.class, key, ctx);
     }
 
     /**
      * Resolve an object flag.
      */
-    public ProviderEvaluation<Value> objectEvaluation(String key, Value defaultValue, EvaluationContext ctx) {
+    public ProviderEvaluation<Value> objectEvaluation(String key, Value defaultValue, LayeredEvaluationContext ctx) {
         final ProviderEvaluation<Object> evaluation = resolve(Object.class, key, ctx);
 
         return ProviderEvaluation.<Value>builder()
@@ -157,7 +158,7 @@ public class InProcessResolver implements Resolver {
                 : new SyncStreamQueueSource(options, onConnectionEvent);
     }
 
-    private <T> ProviderEvaluation<T> resolve(Class<T> type, String key, EvaluationContext ctx) {
+    private <T> ProviderEvaluation<T> resolve(Class<T> type, String key, LayeredEvaluationContext ctx) {
         final StorageQueryResult storageQueryResult = flagStore.getFlag(key);
         final FeatureFlag flag = storageQueryResult.getFeatureFlag();
 
@@ -186,6 +187,10 @@ public class InProcessResolver implements Resolver {
             resolvedVariant = flag.getDefaultVariant();
             reason = Reason.STATIC.toString();
         } else {
+
+
+
+
             try {
                 final Object jsonResolved = operator.apply(key, flag.getTargeting(), ctx);
                 if (jsonResolved == null) {

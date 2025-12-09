@@ -6,10 +6,10 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-class StringComp implements PreEvaluatedArgumentsExpression {
+public class StringComp implements PreEvaluatedArgumentsExpression {
     private final Type type;
 
-    StringComp(Type type) {
+    public StringComp(Type type) {
         this.type = type;
     }
 
@@ -52,7 +52,7 @@ class StringComp implements PreEvaluatedArgumentsExpression {
         }
     }
 
-    enum Type {
+    public enum Type {
         STARTS_WITH("starts_with"),
         ENDS_WITH("ends_with");
 

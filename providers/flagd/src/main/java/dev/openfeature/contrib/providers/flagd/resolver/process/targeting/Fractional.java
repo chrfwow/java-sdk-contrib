@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.MurmurHash3;
 
 @Slf4j
-class Fractional implements PreEvaluatedArgumentsExpression {
+public class Fractional implements PreEvaluatedArgumentsExpression {
 
     public String key() {
         return "fractional";
