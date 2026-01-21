@@ -76,7 +76,7 @@ class FlagdProviderSyncResources {
             }
             long remaining = end - now;
             synchronized (this) {
-                if (isShutDown) {
+                if (isShutDown || isFatal) {
                     break;
                 }
                 if (isInitialized) { // might have changed in the meantime
@@ -90,12 +90,11 @@ class FlagdProviderSyncResources {
                 }
             }
         }
+        if (isFatal) {
+            throw new FatalError("Already shut down due to previous fatal error.");
+        }
         if (isShutDown) {
-            String msg = "Already shut down due to previous error.";
-            if (isFatal) {
-                throw new FatalError(msg);
-            }
-            throw new GeneralError(msg);
+            throw new GeneralError("Already shut down due to previous error.");
         }
     }
 
