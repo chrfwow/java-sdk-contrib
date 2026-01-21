@@ -35,7 +35,7 @@ class FlagdProviderSyncResources {
      * @return true iff this was the first call to {@code initialize()}
      */
     public synchronized boolean initialize() {
-        if (this.isInitialized || this.isShutDown) {
+        if (this.isInitialized || this.isShutDown || this.isFatal) {
             return false;
         }
         this.isInitialized = true;
