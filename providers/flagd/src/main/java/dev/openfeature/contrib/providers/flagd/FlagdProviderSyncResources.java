@@ -39,7 +39,6 @@ class FlagdProviderSyncResources {
             return false;
         }
         this.isInitialized = true;
-        this.isFatal = false;
         this.notifyAll();
         return true;
     }
@@ -68,7 +67,7 @@ class FlagdProviderSyncResources {
     public void waitForInitialization(long deadline) {
         long start = System.currentTimeMillis();
         long end = start + deadline;
-        while (!isInitialized && !isShutDown) {
+        while (!isInitialized && !isShutDown && !isFatal) {
             long now = System.currentTimeMillis();
             // if wait(0) is called, the thread would wait forever, so we abort when this would happen
             if (now >= end) {
