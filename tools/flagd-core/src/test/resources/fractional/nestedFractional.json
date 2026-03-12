@@ -1,0 +1,60 @@
+{
+  "rule": [
+    {
+      "var": "headerColor"
+    },
+    [
+      {
+        "fractional": [
+          {
+            "var": "tier"
+          },
+          [
+            "red",
+            25
+          ],
+          [
+            "blue",
+            25
+          ],
+          [
+            "green",
+            25
+          ],
+          [
+            "yellow",
+            25
+          ]
+        ]
+      },
+      50
+    ],
+    [
+      {
+        "fractional": [
+          {
+            "var": "tier"
+          },
+          [
+            "red",
+            50
+          ],
+          [
+            "blue",
+            10
+          ],
+          [
+            "green",
+            20
+          ],
+          [
+            "yellow",
+            20
+          ]
+        ]
+      },
+      50
+    ]
+  ],
+  "result": "red"
+}

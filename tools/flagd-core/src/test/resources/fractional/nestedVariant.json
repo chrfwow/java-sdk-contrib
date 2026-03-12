@@ -1,0 +1,40 @@
+{
+  "rule": [
+    true,
+    [
+      {
+        "if": [
+          {
+            "in": [
+              "us",
+              {
+                "var": "locale"
+              }
+            ]
+          },
+          "blue",
+          "red"
+        ]
+      },
+      50
+    ],
+    [
+      {
+        "if": [
+          {
+            "in": [
+              "us",
+              {
+                "var": "locale"
+              }
+            ]
+          },
+          "green",
+          "white"
+        ]
+      },
+      70
+    ]
+  ],
+  "result": "red"
+}

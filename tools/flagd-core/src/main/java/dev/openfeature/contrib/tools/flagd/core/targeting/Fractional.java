@@ -1,7 +1,17 @@
 package dev.openfeature.contrib.tools.flagd.core.targeting;
 
 import io.github.jamsesso.jsonlogic.JsonLogicException;
+import io.github.jamsesso.jsonlogic.ast.JsonLogicArray;
+import io.github.jamsesso.jsonlogic.ast.JsonLogicBoolean;
+import io.github.jamsesso.jsonlogic.ast.JsonLogicNode;
+import io.github.jamsesso.jsonlogic.ast.JsonLogicNumber;
+import io.github.jamsesso.jsonlogic.ast.JsonLogicPrimitive;
+import io.github.jamsesso.jsonlogic.ast.JsonLogicPrimitiveType;
+import io.github.jamsesso.jsonlogic.ast.JsonLogicString;
+import io.github.jamsesso.jsonlogic.ast.JsonLogicVariable;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluationException;
+import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluator;
+import io.github.jamsesso.jsonlogic.evaluator.JsonLogicExpression;
 import io.github.jamsesso.jsonlogic.evaluator.expressions.PreEvaluatedArgumentsExpression;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -11,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
+import io.github.jamsesso.jsonlogic.utils.ArrayLike;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.MurmurHash3;
@@ -19,7 +30,7 @@ import org.apache.commons.codec.digest.MurmurHash3;
  * Fractional targeting operation for bucket-based flag distribution.
  */
 @Slf4j
-class Fractional implements PreEvaluatedArgumentsExpression {
+class Fractional implements JsonLogicExpression {
 
     @Override
     public String key() {
@@ -27,30 +38,48 @@ class Fractional implements PreEvaluatedArgumentsExpression {
     }
 
     @Override
-    public Object evaluate(List arguments, Object data, String jsonPath) throws JsonLogicEvaluationException {
-        if (arguments.size() < 2) {
+    public Object evaluate(JsonLogicEvaluator jsonLogicEvaluator, JsonLogicArray jsonLogicArray, Object data,
+            String jsonPath)
+            throws JsonLogicEvaluationException {
+        if (jsonLogicArray.size() < 2) {
             return null;
         }
 
         final Operator.FlagProperties properties = new Operator.FlagProperties(data);
 
         // check optional string target in first arg
-        Object arg1 = arguments.get(0);
+        JsonLogicNode arg1 = jsonLogicArray.get(0);
 
         final byte[] bucketBy;
         final Object[] distributions;
 
-        if (arg1 instanceof String) {
-            bucketBy = ((String) arg1).getBytes(StandardCharsets.UTF_8);
-            Object[] source = arguments.toArray();
+        if (arg1 instanceof JsonLogicVariable) {
+            var value = jsonLogicEvaluator.evaluate((JsonLogicVariable) arg1, data, jsonPath);
+            if (value instanceof String) {
+                bucketBy = ((String) value).getBytes(StandardCharsets.UTF_8);
+            } else if (value instanceof Number) {
+                bucketBy = numberToByteArray(((Number) value));
+            } else if (value instanceof Boolean) {
+                bucketBy = new byte[] {(byte) (((Boolean) value) ? 1 : 0)};
+            } else {
+                log.debug("Bucketing value did not evaluate to a JSON primitive, aborting fractional evaluation");
+                return null;
+            }
+            Object[] source = jsonLogicArray.toArray();
             distributions = Arrays.copyOfRange(source, 1, source.length);
-        } else if (arg1 instanceof Number) {
-            bucketBy = numberToByteArray((Number) arg1);
-            Object[] source = arguments.toArray();
-            distributions = Arrays.copyOfRange(source, 1, source.length);
-        } else if (arg1 instanceof Boolean) {
-            bucketBy = new byte[] {(byte) (((boolean) arg1) ? 1 : 0)};
-            Object[] source = arguments.toArray();
+        } else if (arg1 instanceof JsonLogicPrimitive) {
+            JsonLogicPrimitive<?> primitive = (JsonLogicPrimitive<?>) arg1;
+            if (primitive.getPrimitiveType() == JsonLogicPrimitiveType.STRING) {
+                bucketBy = ((JsonLogicString) arg1).getValue().getBytes(StandardCharsets.UTF_8);
+            } else if (primitive.getPrimitiveType() == JsonLogicPrimitiveType.NUMBER) {
+                bucketBy = numberToByteArray(((JsonLogicNumber) arg1).getValue());
+            } else if (primitive.getPrimitiveType() == JsonLogicPrimitiveType.BOOLEAN) {
+                bucketBy = new byte[] {(byte) (((JsonLogicBoolean) arg1).getValue() ? 1 : 0)};
+            } else {
+                log.debug("Invalid bucketing value type");
+                return null;
+            }
+            Object[] source = jsonLogicArray.toArray();
             distributions = Arrays.copyOfRange(source, 1, source.length);
         } else {
             // fallback to targeting key if present
@@ -60,7 +89,7 @@ class Fractional implements PreEvaluatedArgumentsExpression {
             }
 
             bucketBy = (properties.getFlagKey() + properties.getTargetingKey()).getBytes(StandardCharsets.UTF_8);
-            distributions = arguments.toArray();
+            distributions = jsonLogicArray.toArray();
         }
 
         final List<FractionProperty> propertyList = new ArrayList<>();
@@ -68,7 +97,7 @@ class Fractional implements PreEvaluatedArgumentsExpression {
 
         try {
             for (Object dist : distributions) {
-                FractionProperty fractionProperty = new FractionProperty(dist, jsonPath);
+                FractionProperty fractionProperty = new FractionProperty(jsonLogicEvaluator, dist, data, jsonPath);
                 propertyList.add(fractionProperty);
                 totalWeight += fractionProperty.getWeight();
             }
@@ -84,23 +113,23 @@ class Fractional implements PreEvaluatedArgumentsExpression {
     private byte[] numberToByteArray(Number number) {
         if (number instanceof Integer) {
             return new byte[] {
-                (byte) ((int) number >> 24),
-                (byte) ((int) number >> 16),
-                (byte) ((int) number >> 8),
-                (byte) ((int) number)
+                    (byte) ((int) number >> 24),
+                    (byte) ((int) number >> 16),
+                    (byte) ((int) number >> 8),
+                    (byte) ((int) number)
             };
         } else if (number instanceof Double) {
             return numberToByteArray(Double.doubleToLongBits((Double) number));
         } else if (number instanceof Long) {
             return new byte[] {
-                (byte) ((long) number >> 56),
-                (byte) ((long) number >> 48),
-                (byte) ((long) number >> 40),
-                (byte) ((long) number >> 32),
-                (byte) ((long) number >> 24),
-                (byte) ((long) number >> 16),
-                (byte) ((long) number >> 8),
-                (byte) ((long) number)
+                    (byte) ((long) number >> 56),
+                    (byte) ((long) number >> 48),
+                    (byte) ((long) number >> 40),
+                    (byte) ((long) number >> 32),
+                    (byte) ((long) number >> 24),
+                    (byte) ((long) number >> 16),
+                    (byte) ((long) number >> 8),
+                    (byte) ((long) number)
             };
         } else if (number instanceof BigInteger) {
             return ((BigInteger) number).toByteArray();
@@ -108,8 +137,8 @@ class Fractional implements PreEvaluatedArgumentsExpression {
             return new byte[] {(byte) number};
         } else if (number instanceof Short) {
             return new byte[] {
-                (byte) ((short) number >> 8),
-                (byte) ((short) number)
+                    (byte) ((short) number >> 8),
+                    (byte) ((short) number)
             };
         } else if (number instanceof Float) {
             return numberToByteArray(Float.floatToIntBits((Float) number));
@@ -150,7 +179,9 @@ class Fractional implements PreEvaluatedArgumentsExpression {
             // DO NOT REMOVE, spotbugs: CT_CONSTRUCTOR_THROW
         }
 
-        FractionProperty(final Object from, String jsonPath) throws JsonLogicException {
+        FractionProperty(final JsonLogicEvaluator evaluator, Object from, final Object data, String jsonPath)
+                throws JsonLogicException {
+
             if (!(from instanceof List<?>)) {
                 throw new JsonLogicException("Property is not an array", jsonPath);
             }
@@ -161,30 +192,33 @@ class Fractional implements PreEvaluatedArgumentsExpression {
                 throw new JsonLogicException("Fraction property needs at least one element", jsonPath);
             }
 
-            // first must be a string
-            if (!(array.get(0) instanceof String)) {
+            // first must be a string or evaluate to a string (variant name)
+            var first = array.get(0);
+            if (first instanceof String) {
+                variant = (String) first;
+            } else if (first instanceof JsonLogicNode) {
+                var evaluated = evaluator.evaluate((JsonLogicNode) first, data, jsonPath);
+                if (evaluated instanceof String) {
+                    variant = (String) evaluated;
+                } else {
+                    throw new JsonLogicException(
+                            "Variant is not a string and did not evaluate to a string", jsonPath);
+                }
+            } else {
                 throw new JsonLogicException(
-                        "First element of the fraction property is not a string variant", jsonPath);
+                        "Variant is not a string or an expression", jsonPath);
             }
 
-            variant = (String) array.get(0);
             if (array.size() >= 2) {
                 // second element must be a number
-                if (!(array.get(1) instanceof Number)) {
+                if (!(array.get(1) instanceof JsonLogicNumber)) {
                     throw new JsonLogicException("Second element of the fraction property is not a number",
                             jsonPath);
                 }
-                weight = ((Number) array.get(1)).intValue();
+                weight = ((JsonLogicNumber) array.get(1)).getValue().intValue();
             } else {
                 weight = 1;
             }
-        }
-
-        float getPercentage(int totalWeight) {
-            if (weight == 0) {
-                return 0;
-            }
-            return (float) (weight * 100) / totalWeight;
         }
     }
 }
