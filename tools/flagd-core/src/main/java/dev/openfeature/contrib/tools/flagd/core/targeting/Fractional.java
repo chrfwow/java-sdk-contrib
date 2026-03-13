@@ -15,11 +15,9 @@ import io.github.jamsesso.jsonlogic.evaluator.JsonLogicExpression;
 import io.github.jamsesso.jsonlogic.evaluator.expressions.PreEvaluatedArgumentsExpression;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.BitSet;
 import java.util.List;
 import io.github.jamsesso.jsonlogic.utils.ArrayLike;
 import lombok.Getter;
@@ -136,10 +134,7 @@ class Fractional implements JsonLogicExpression {
         } else if (number instanceof Byte) {
             return new byte[] {(byte) number};
         } else if (number instanceof Short) {
-            return new byte[] {
-                (byte) ((short) number >> 8),
-                (byte) ((short) number)
-            };
+            return new byte[] {(byte) ((short) number >> 8), (byte) ((short) number)};
         } else if (number instanceof Float) {
             return numberToByteArray(Float.floatToIntBits((Float) number));
         } else if (number instanceof BigDecimal) {
@@ -150,28 +145,41 @@ class Fractional implements JsonLogicExpression {
     }
 
     private static String distributeValue(
-            final byte[] hashKey, final List<FractionProperty> propertyList, final int totalWeight,
+            final byte[] hashKey,
+            final List<FractionProperty> propertyList,
+            final int totalWeight,
             final String jsonPath)
             throws JsonLogicEvaluationException {
         int mmrHash = MurmurHash3.hash32x86(hashKey, 0, hashKey.length, 0);
-        int bucket = Math.abs((int) ((mmrHash * (long) totalWeight) >> 32));
+        return distributeValueFromHash(mmrHash, propertyList, totalWeight, jsonPath);
+    }
+
+    static String distributeValueFromHash(
+            final int hash, final List<FractionProperty> propertyList, final int totalWeight, final String jsonPath)
+            throws JsonLogicEvaluationException {
+        long longHash = Math.abs((long) hash);
+        if (hash < 0) {
+            // preserve the MSB (sign) of the hash, which would get lost in a typecast and in Math.abs
+            longHash = longHash | (1L << 31);
+        }
+        int bucket = Math.abs((int) ((longHash * totalWeight) >> 32));
 
         int bucketSum = 0;
         for (FractionProperty p : propertyList) {
             bucketSum += p.weight;
 
-            if (bucket < bucketSum) {
+            if (bucket <= bucketSum) {
                 return p.getVariant();
             }
         }
 
         // this shall not be reached
-        throw new JsonLogicEvaluationException("Unable to find a correct bucket", jsonPath);
+        throw new JsonLogicEvaluationException("Unable to find a correct bucket for hash " + hash, jsonPath);
     }
 
     @Getter
     @SuppressWarnings({"checkstyle:NoFinalizer"})
-    private static class FractionProperty {
+    static class FractionProperty {
         private final String variant;
         private final int weight;
 
