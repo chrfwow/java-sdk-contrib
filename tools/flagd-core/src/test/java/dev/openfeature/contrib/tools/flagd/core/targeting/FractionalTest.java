@@ -13,8 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import io.github.jamsesso.jsonlogic.JsonLogic;
 import io.github.jamsesso.jsonlogic.JsonLogicException;
-import io.github.jamsesso.jsonlogic.ast.JsonLogicArray;
-import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluationException;
+import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluator;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,13 +27,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
-import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluator;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.converter.ArgumentConversionException;
 import org.junit.jupiter.params.converter.ConvertWith;
 import org.junit.jupiter.params.converter.TypedArgumentConverter;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.Mockito;
 
 class FractionalTest {
 
@@ -64,11 +63,14 @@ class FractionalTest {
     @ParameterizedTest
     @ValueSource(ints = {0, 1, -1, Integer.MAX_VALUE, Integer.MAX_VALUE - 1, Integer.MIN_VALUE, Integer.MIN_VALUE + 1})
     void edgeCasesDoNotThrow(int hash) throws JsonLogicException {
+        var evaluator = Mockito.mock(JsonLogicEvaluator.class);
+        var data = new Object();
         int totalWeight = 8;
         int buckets = 4;
         List<Fractional.FractionProperty> bucketsList = new ArrayList<>(buckets);
         for (int i = 0; i < buckets; i++) {
-            bucketsList.add(new Fractional.FractionProperty(List.of("bucket" + i, totalWeight / buckets), ""));
+            bucketsList.add(
+                    new Fractional.FractionProperty(evaluator, List.of("bucket" + i, totalWeight / buckets), data, ""));
         }
 
         AtomicReference<String> result = new AtomicReference<>();
@@ -80,16 +82,18 @@ class FractionalTest {
 
     @Test
     void statistics() throws JsonLogicException {
+        var evaluator = Mockito.mock(JsonLogicEvaluator.class);
+        var data = new Object();
         int totalWeight = Integer.MAX_VALUE;
         int buckets = 16;
         int[] hits = new int[buckets];
         List<Fractional.FractionProperty> bucketsList = new ArrayList<>(buckets);
         int weight = totalWeight / buckets;
         for (int i = 0; i < buckets - 1; i++) {
-            bucketsList.add(new Fractional.FractionProperty(List.of("" + i, weight), ""));
+            bucketsList.add(new Fractional.FractionProperty(evaluator, List.of("" + i, weight), data, ""));
         }
-        bucketsList.add(
-                new Fractional.FractionProperty(List.of("" + (buckets - 1), totalWeight - weight * (buckets - 1)), ""));
+        bucketsList.add(new Fractional.FractionProperty(
+                evaluator, List.of("" + (buckets - 1), totalWeight - weight * (buckets - 1)), data, ""));
 
         for (long i = Integer.MIN_VALUE; i <= Integer.MAX_VALUE; i += 127) {
             String bucketStr = Fractional.distributeValueFromHash((int) i, bucketsList, totalWeight, "");

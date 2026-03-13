@@ -12,14 +12,12 @@ import io.github.jamsesso.jsonlogic.ast.JsonLogicVariable;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluationException;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicEvaluator;
 import io.github.jamsesso.jsonlogic.evaluator.JsonLogicExpression;
-import io.github.jamsesso.jsonlogic.evaluator.expressions.PreEvaluatedArgumentsExpression;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import io.github.jamsesso.jsonlogic.utils.ArrayLike;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.MurmurHash3;
@@ -36,8 +34,8 @@ class Fractional implements JsonLogicExpression {
     }
 
     @Override
-    public Object evaluate(JsonLogicEvaluator jsonLogicEvaluator, JsonLogicArray jsonLogicArray, Object data,
-            String jsonPath)
+    public Object evaluate(
+            JsonLogicEvaluator jsonLogicEvaluator, JsonLogicArray jsonLogicArray, Object data, String jsonPath)
             throws JsonLogicEvaluationException {
         if (jsonLogicArray.size() < 2) {
             return null;
@@ -202,28 +200,31 @@ class Fractional implements JsonLogicExpression {
 
             // first must be a string or evaluate to a string (variant name)
             var first = array.get(0);
-            if (first instanceof String) {
+            if (first instanceof JsonLogicString) {
+                variant = ((JsonLogicString) first).getValue();
+            } else if (first instanceof String) {
                 variant = (String) first;
             } else if (first instanceof JsonLogicNode) {
                 var evaluated = evaluator.evaluate((JsonLogicNode) first, data, jsonPath);
                 if (evaluated instanceof String) {
                     variant = (String) evaluated;
                 } else {
-                    throw new JsonLogicException(
-                            "Variant is not a string and did not evaluate to a string", jsonPath);
+                    throw new JsonLogicException("Variant is not a string and did not evaluate to a string", jsonPath);
                 }
             } else {
-                throw new JsonLogicException(
-                        "Variant is not a string or an expression", jsonPath);
+                throw new JsonLogicException("Variant is not a string or an expression", jsonPath);
             }
 
             if (array.size() >= 2) {
                 // second element must be a number
-                if (!(array.get(1) instanceof JsonLogicNumber)) {
-                    throw new JsonLogicException("Second element of the fraction property is not a number",
-                            jsonPath);
+                Object weightObj = array.get(1);
+                if (weightObj instanceof Integer) {
+                    weight = (Integer) weightObj;
+                } else if (weightObj instanceof JsonLogicNumber) {
+                    weight = ((JsonLogicNumber) weightObj).getValue().intValue();
+                } else {
+                    throw new JsonLogicException("Second element of the fraction property is not an integer", jsonPath);
                 }
-                weight = ((JsonLogicNumber) array.get(1)).getValue().intValue();
             } else {
                 weight = 1;
             }
